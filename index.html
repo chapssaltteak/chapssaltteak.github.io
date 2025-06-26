@@ -90,6 +90,7 @@
         .postFrom .p {
             font-size: 0.9rem;
             padding: 0.1rem;
+            margin-top: 5px;
             font-weight: 500;
         }
 
@@ -195,13 +196,18 @@
             <header class="header">
                 <div style="display: flex; flex-direction: row; width: 100%;">
                     <img class="logo" src="Chapssaltteok.Logo.png" alt="찹쌀떡 익스프레스" onclick="window.location.href=''" />
-                    <button class="roleBtn" onclick="window.open('https://docs.google.com/document/d/1IFPjt8nA_-7-Z8Z7VVrs2ypkEus9CS362W9SQDFAvUI/edit?usp=sharing', '_blank')">사용법</button>
+                    <button class="roleBtn"
+                        onclick="window.open('https://docs.google.com/document/d/1IFPjt8nA_-7-Z8Z7VVrs2ypkEus9CS362W9SQDFAvUI/edit?usp=sharing', '_blank')">사용법</button>
                 </div>
             </header>
             <form class="postFrom" method="GET" onsubmit="return onSubmit(event)">
-                <button class="button" type="submit">
-                    검색 시작
-                </button>
+                <div style="display: flex; flex-direction: row;">
+                    <select class="select_mail">
+                        <option>트래킹 메일</option>
+                        <option>주문 확인서 메일</option>
+                    </select>
+                    <button class="button" type="submit">검색 시작</button>
+                </div>
                 <p class="p">
                     신청서를 처음부터 끝까지 입력해주세요.
                 </p>
@@ -220,7 +226,7 @@
     </div>
 
     <script>
-        async function crawl(invoice, orderNum, items) {
+        async function crawl(invoice = null, orderNum, items) {
             const result = []
             try {
                 const res = await fetch("https://chiikawamarket.jp/en"); // CORS 에러 발생 가능
@@ -280,12 +286,19 @@
                         </div>
                     </div>
                 `).join('');
-                invoices = invoice.split("/");
+                if (invoice !== null) {
+                    let invoices = invoice.split("/");
+                    document.querySelector(".header").innerHTML += `
+                        <p>&nbsp;배송 번호 : 
+                            ${invoices[0]}&nbsp;/&nbsp;
+                            <b class='copy-text' style='font-weight: 700;'>${invoices[1]}</b>
+                        </p>
+                        <p>&nbsp;주문 번호 : 
+                            <b class='copy-text' style='font-weight: 700;'>${orderNum}</b>
+                        </p>
+                    `
+                }
                 document.querySelector(".header").innerHTML += `
-                    <p>&nbsp;배송 번호 : 
-                        ${invoices[0]}&nbsp;/&nbsp;
-                        <b class='copy-text' style='font-weight: 700;'>${invoices[1]}</b>
-                    </p>
                     <p>&nbsp;주문 번호 : 
                         <b class='copy-text' style='font-weight: 700;'>${orderNum}</b>
                     </p>
@@ -307,50 +320,82 @@
                 });
             }
         }
+
         async function onSubmit(e) {
             e.preventDefault();
             document.querySelector(".postFrom").style.display = "none";
             document.querySelector(".loading").style.display = "flex";
             try {
-                let result = {}
-                const textArea = document.querySelector(".textArea").value;
-
-                const invoiceNum = () => {
-                    // 운송 회사 추출
-                    let companyName = '';
-                    const match = textArea.match(/配送会社\s*([^\s]+)/);
-                    if (match) { companyName = match[1]; }
-                    const value = textArea.match(/送り状番号\s*:\s*(\d+)/);
-                    if (value) { return companyName + " / " + value[1]; }
-                }
-
-                const orderNum = () => {
-                    const match = textArea.match(/CHIIKAWA-\d+/);
-                    if (match) { return match[0] }
-                }
-
-                // 상품 코드, 갯수 추출
-                const items = () => {
-                    const blockRegex = /商品コード\s*\.\.\.\s*(.+?)\s*\n商品名\s*\.\.\.\s*(.+?)\s*\n個数\s*\.\.\.\s*(\d+)個/g;
-                    const items = [];
-                    let match;
-                    while ((match = blockRegex.exec(textArea)) !== null) {
-                        const [_, code, name, count] = match;
-                        if (code.trim() === "ORIGINALBOX") continue;
-                        items.push({
-                            code: code.trim(),
-                            quantity: Number(count),
-                        });
-                    }
-                    return items;
-                };
-                crawl(invoiceNum(), orderNum(), items())
+                const mailType = document.querySelector('.select_mail').value;
+                if (mailType === '트래킹 메일') { trekking() } else { checking() }
             }
             catch (error) {
                 //에러 메세지
                 document.querySelector(".postFrom").style.display = "flex";
                 document.querySelector(".loading").style.display = "none";
             }
+        }
+        
+        async function checking() {
+            const textArea = document.querySelector(".textArea").value;
+            const orderNum = () => {
+                const match = textArea.match(/CHIIKAWA-\d+/);
+                if (match) { return match[0] }
+            }
+
+            const items = () => {
+                const blockRegex = /商品コード\s*\.\.\.\s*(.+?)\s*\n商品名\s*\.\.\.\s*(.+?)\s*(?:\nオプション\s*\.\.\.\s*.+?)?\s*\n販売単価\s*\.\.\.\s*([\d,]+)円\s*\n個数\s*\.\.\.\s*(\d+)個/g;
+                const items = [];
+                let match;
+                while ((match = blockRegex.exec(textArea)) !== null) {
+                    const [_, code, name, price, count] = match;
+                    if (code.trim() === "ORIGINALBOX") continue;
+                    items.push({
+                        code: code.trim(),
+                        name: name.trim(),
+                        price: Number(price.replace(/,/g, '')),
+                        quantity: Number(count)
+                    });
+                }
+                return items;
+            };
+            crawl(null, orderNum(), items())
+        }
+
+        async function trekking() {
+            let result = {}
+            const textArea = document.querySelector(".textArea").value;
+
+            const invoiceNum = () => {
+                // 운송 회사 추출
+                let companyName = '';
+                const match = textArea.match(/配送会社\s*([^\s]+)/);
+                if (match) { companyName = match[1]; }
+                const value = textArea.match(/送り状番号\s*:\s*(\d+)/);
+                if (value) { return companyName + " / " + value[1]; }
+            }
+
+            const orderNum = () => {
+                const match = textArea.match(/CHIIKAWA-\d+/);
+                if (match) { return match[0] }
+            }
+
+            // 상품 코드, 갯수 추출
+            const items = () => {
+                const blockRegex = /商品コード\s*\.\.\.\s*(.+?)\s*\n商品名\s*\.\.\.\s*(.+?)\s*\n個数\s*\.\.\.\s*(\d+)個/g;
+                const items = [];
+                let match;
+                while ((match = blockRegex.exec(textArea)) !== null) {
+                    const [_, code, name, count] = match;
+                    if (code.trim() === "ORIGINALBOX") continue;
+                    items.push({
+                        code: code.trim(),
+                        quantity: Number(count),
+                    });
+                }
+                return items;
+            };
+            crawl(invoiceNum(), orderNum(), items())
         }
     </script>
 </body>
