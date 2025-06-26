@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Chapssaltteok Express</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reset-css@4.0.1/reset.min.css" />
+</head>
+
+<body>
+    <!-- <button onclick="crawl()">크롤링 시작</button> -->
+    <!-- <pre id="output"></pre> -->
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .background {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            width: 100vw;
+            min-height: 100vh;
+            background: rgb(250, 250, 250);
+            /* 분홍색 도트 무늬 배경 */
+            background-image: radial-gradient(circle 1px, pink 100%, transparent 0);
+            background-size: 50px 50px;
+            /* 도트 간격 조절 */
+            background-repeat: repeat;
+        }
+
+        .header {
+            position: sticky;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            width: calc(700px - 2rem);
+            padding: 0.5rem 1rem;
+            box-shadow: 0px 5px 5px rgb(0, 0, 0, 0.05);
+            gap: 5px;
+        }
+
+        .header .logo {
+            /* height: 2rem; */
+            height: 2rem;
+        }
+
+        .header .roleBtn {
+            margin-left: auto;
+            color: white;
+            background-color: #660099;
+            border-radius: 5px;
+            padding: 0px 2rem;
+            border: 0;
+            font-weight: 700;
+        }
+
+        .content {
+            display: flex;
+            flex-direction: column;
+            width: 700px;
+            min-height: 100vh;
+            background: white;
+        }
+
+        .postFrom {
+            flex-shrink: 1;
+            width: calc(700px - 2rem);
+            margin: 1rem;
+            margin-top: 20px;
+            height: calc(100% - 2rem);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .postFrom .button {
+            margin-left: auto;
+            background-color: #FF6600;
+            padding: 0.25rem 2.5rem;
+            border: 0;
+            border-radius: 5px;
+            color: white;
+            font-weight: 700;
+        }
+
+        .postFrom .p {
+            font-size: 0.9rem;
+            padding: 0.1rem;
+            font-weight: 500;
+        }
+
+        .postFrom .textArea {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin-top: 5px;
+            border: 2px solid #660099;
+            background: whitesmoke;
+            border-radius: 5px;
+            resize: none;
+        }
+
+        .loading {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 10px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #FF6600;
+        }
+
+        .loading img {
+            width: 100%;
+        }
+
+        .itemList {
+            width: calc(100% - 2rem);
+            height: calc(100% - 1rem);
+            margin: 1rem;
+        }
+
+        .itemList .items {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1rem 0;
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+        }
+
+        .itemList .items .items-img {
+            width: 100%;
+            max-width: 200px;
+            object-fit: contain;
+        }
+
+        .itemList .items .items-content {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            flex: 1;
+            /* 가로 2칸: 첫 칸 auto, 두 번째 칸 1fr */
+        }
+
+        .itemList .items .items-content strong {
+            font-weight: bold;
+        }
+
+        .itemList .items .items-content .linkBtn {
+            grid-column: 1 / -1;
+            /* 또는 grid-column: span 2; */
+            justify-self: start;
+            /* 왼쪽 정렬 (원하는 경우) */
+            width: 100%;
+        }
+
+        .copy-img,
+        .copy-text {
+            cursor: pointer;
+        }
+
+        .invoiceNum {
+            position: sticky;
+            top: 0;
+        }
+
+        .itemList .items .items-content b.copy-text {
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            display: inline-block;
+            max-width: 100%;
+        }
+
+        @media screen and (max-width: 700px) {
+            .background {
+                display: flex;
+                flex-direction: row;
+                justify-content: flex-start;
+                background-color: whitesmoke;
+                width: 100vw;
+                height: 100vh;
+            }
+        }
+    </style>
+    <div class="background">
+        <div class="content">
+            <header class="header">
+                <div style="display: flex; flex-direction: row; width: 100%;">
+                    <img class="logo" src="Chapssaltteok.Logo.png" alt="찹쌀떡 익스프레스" onclick="window.location.href=''" />
+                    <button class="roleBtn" onclick="window.open('https://docs.google.com/document/d/1IFPjt8nA_-7-Z8Z7VVrs2ypkEus9CS362W9SQDFAvUI/edit?usp=sharing', '_blank')">사용법</button>
+                </div>
+            </header>
+            <form class="postFrom" method="GET" onsubmit="return onSubmit(event)">
+                <button class="button" type="submit">
+                    검색 시작
+                </button>
+                <p class="p">
+                    신청서를 처음부터 끝까지 입력해주세요.
+                </p>
+                <textarea class="textArea" name="textArea"></textarea>
+            </form>
+            <section class="loading">
+                <div style="border-radius: 100%; overflow: hidden; width: 50%; border: 5px solid #660099;">
+                    <img src="Chapssaltteok.Loading.gif" alt="loading_img">
+                </div>
+                <p>물건을 찾아오는 중 입니다.</p>
+            </section>
+            <section class="itemList">
+
+            </section>
+        </div>
+    </div>
+
+    <script>
+        async function crawl(invoice, orderNum, items) {
+            const result = []
+            try {
+                const res = await fetch("https://chiikawamarket.jp/en"); // CORS 에러 발생 가능
+                for (let i = 0; i < items.length; i++) {
+                    const code = items[i].code;
+                    const url = `https://chiikawamarket.jp/en/collections/restock/products/${code}`;
+                    try {
+                        let item = {
+                            invoice: invoice,
+                            url: url,
+                            brand: 'Chiikawamarket',
+                            quantity: items[i].quantity,
+                            img: `https://chiikawamarket.jp/cdn/shop/files/${code}_1.jpg?v=1710477835&width=800`
+                        }
+                        // HTML 파싱
+                        const res = await fetch(url);
+                        const html = await res.text();
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, "text/html");
+                        item.title = doc.querySelector(".product__title")?.textContent.trim() || "";
+                        const price = doc.querySelector(".price-item.price-item--regular")?.textContent.trim() || "";
+                        item.price = price.match(/\d+/g)?.join("") ?? "";
+                        item.boolen = true;
+                        result.push(item)
+                        // if (i === 1) break;
+                    } catch (err) {
+                        result.boolen = false;
+                    }
+                }
+            } catch (err) { }
+            finally {
+                document.querySelector(".loading").style.display = "none";
+                if (!result || result.length === 0) {
+                    document.querySelector(".postFrom").style.display = "flex";
+                    alert('검색해오지 못했습니다.')
+                    return;
+                }
+                const html = result.map(item => `
+                    <div class='items'>
+                        <img class='items-img copy-img' src="${item.img}" alt="${item.title}" />
+                        <div class='items-content'>
+                            <strong>상품명:</strong> 
+                            <b class='copy-text'>&nbsp;${item.title}</b>
+                            <strong>상품 페이지:</strong> 
+                            <b class='copy-text'>&nbsp;${item.url}</b>
+                            <strong>상품 이미지:</strong> 
+                            <b class='copy-text'>&nbsp;${item.img}</b>
+                            <strong>브랜드:</strong> 
+                            <b class='copy-text'>&nbsp;${item.brand}</b>
+                            <strong>수량:</strong> 
+                            <b class='copy-text'>&nbsp;${item.quantity}</b>
+                            <strong>가격:</strong> 
+                            <b class='copy-text'>&nbsp;${item.price}￥</b>
+                            <button class="linkBtn" onclick="window.open('${item.url}', '_blank')">
+                                상품 페이지 바로가기
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                invoices = invoice.split("/");
+                document.querySelector(".header").innerHTML += `
+                    <p>&nbsp;배송 번호 : 
+                        ${invoices[0]}&nbsp;/&nbsp;
+                        <b class='copy-text' style='font-weight: 700;'>${invoices[1]}</b>
+                    </p>
+                    <p>&nbsp;주문 번호 : 
+                        <b class='copy-text' style='font-weight: 700;'>${orderNum}</b>
+                    </p>
+                `
+                document.querySelector(".itemList").innerHTML = html
+
+                document.querySelectorAll(".copy-text").forEach(el => {
+                    el.addEventListener("click", () => {
+                        const text = el.textContent.trim().replace(/￥/g, ''); // ￥ 제거
+                        navigator.clipboard.writeText(text);
+                    });
+                });
+
+                document.querySelectorAll(".copy-img").forEach(img => {
+                    img.addEventListener("click", () => {
+                        const src = img.src;
+                        navigator.clipboard.writeText(src)
+                    });
+                });
+            }
+        }
+        async function onSubmit(e) {
+            e.preventDefault();
+            document.querySelector(".postFrom").style.display = "none";
+            document.querySelector(".loading").style.display = "flex";
+            try {
+                let result = {}
+                const textArea = document.querySelector(".textArea").value;
+
+                const invoiceNum = () => {
+                    // 운송 회사 추출
+                    let companyName = '';
+                    const match = textArea.match(/配送会社\s*([^\s]+)/);
+                    if (match) { companyName = match[1]; }
+                    const value = textArea.match(/送り状番号\s*:\s*(\d+)/);
+                    if (value) { return companyName + " / " + value[1]; }
+                }
+
+                const orderNum = () => {
+                    const match = textArea.match(/CHIIKAWA-\d+/);
+                    if (match) { return match[0] }
+                }
+
+                // 상품 코드, 갯수 추출
+                const items = () => {
+                    const blockRegex = /商品コード\s*\.\.\.\s*(.+?)\s*\n商品名\s*\.\.\.\s*(.+?)\s*\n個数\s*\.\.\.\s*(\d+)個/g;
+                    const items = [];
+                    let match;
+                    while ((match = blockRegex.exec(textArea)) !== null) {
+                        const [_, code, name, count] = match;
+                        if (code.trim() === "ORIGINALBOX") continue;
+                        items.push({
+                            code: code.trim(),
+                            quantity: Number(count),
+                        });
+                    }
+                    return items;
+                };
+                crawl(invoiceNum(), orderNum(), items())
+            }
+            catch (error) {
+                //에러 메세지
+                document.querySelector(".postFrom").style.display = "flex";
+                document.querySelector(".loading").style.display = "none";
+            }
+        }
+    </script>
+</body>
+
+</html>
