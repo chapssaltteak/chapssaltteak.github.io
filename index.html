@@ -269,22 +269,25 @@
                 }
 
                 if (true) {
-                    document.querySelector(".itemList").innerHTML += `
-                        <div style="display:flex; flex-direction: row;">
-                            <button 
-                            class="jimpassBtn"
-                            style="margin-left: auto; color: white; background-color: #660099; border-radius: 5px; padding: 0.5rem 1rem; border: 0; font-weight: 700;"
-                            >
-                                짐패스 자동 입력
-                            </button>
-                        </div>
-                    `;
+                    if(invoice == null) {
+                        document.querySelector(".itemList").innerHTML += `
+                            <div style="display:flex; flex-direction: row;">
+                                <button 
+                                class="jimpassBtn"
+                                style="margin-left: auto; color: white; background-color: #660099; border-radius: 5px; padding: 0.5rem 1rem; border: 0; font-weight: 700;"
+                                >
+                                    짐패스 자동 입력
+                                </button>
+                            </div>
+                        `;
+                    }
 
                     document.querySelector(".itemList").addEventListener("click", (event) => {
                         if (event.target.classList.contains("jimpassBtn")) { jimpass(); }
                     });
 
                     function jimpass() {
+                        alert('개발중입니다.')
                         const invoices = invoice.split("/")[1];
                         console.log(`
                             ${"const items = " + JSON.stringify(result, null, 2) + ";"}
@@ -448,7 +451,6 @@
                 }
                 return items;
             };
-            console.log('a')
             crawl(invoiceNum(), orderNum(), items())
         }
     </script>
