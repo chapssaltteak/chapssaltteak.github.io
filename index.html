@@ -234,7 +234,6 @@
         async function crawl(invoice = null, orderNum, items) {
             const result = []
             try {
-                const res = await fetch("https://chiikawamarket.jp/en"); // CORS 에러 발생 가능
                 for (let i = 0; i < items.length; i++) {
                     const code = items[i].code;
                     const url = `https://chiikawamarket.jp/en/collections/restock/products/${code}`;
@@ -246,8 +245,8 @@
                             quantity: items[i].quantity,
                             img: `https://chiikawamarket.jp/cdn/shop/files/${code}_1.jpg?v=1710477835&width=800`
                         }
-                        // HTML 파싱
-                        const res = await fetch(url);
+                        const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+                        const res = await fetch(proxyUrl);
                         const html = await res.text();
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(html, "text/html");
@@ -449,6 +448,7 @@
                 }
                 return items;
             };
+            console.log('a')
             crawl(invoiceNum(), orderNum(), items())
         }
     </script>
