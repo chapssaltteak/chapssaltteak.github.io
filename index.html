@@ -208,7 +208,11 @@
                 </div>
             </header>
             <form class="postFrom" method="GET" onsubmit="return onSubmit(event)">
-                <div style="display: flex; flex-direction: row;">
+                <div style="display: flex; flex-direction: row; gap: 5px">
+                    <select class="select_market">
+                        <option>치이카와 마켓</option>
+                        <option>농담곰 마켓</option>
+                    </select>
                     <select class="select_mail">
                         <option>트래킹 메일</option>
                         <option>주문 확인서 메일</option>
@@ -231,29 +235,53 @@
     </div>
 
     <script>
-        async function crawl(invoice = null, orderNum, items) {
+        async function crawl(market, invoice = null, orderNum, items) {
             const result = []
             try {
                 for (let i = 0; i < items.length; i++) {
                     const code = items[i].code;
-                    const url = `https://chiikawamarket.jp/en/collections/restock/products/${code}`;
+                    let url = '';
+                    let img = '';
+                    let brand = '';
+                    switch (market) {
+                        case 'NAGANO': {
+                            url = `https://nagano-market.jp/en/products/${code}`
+                            img = `https://nagano-market.jp/cdn/shop/files/${code}_1_700x.jpg?v=1748937170&width=800`
+                            brand = 'Nagano-market'
+                        } break;
+                        default: case 'CHIIKAWA': {
+                            url = `https://chiikawamarket.jp/en/products/${code}`
+                            img = `https://chiikawamarket.jp/cdn/shop/files/${code}_1.jpg?v=1710477835&width=800`
+                            brand = 'Chiikawamarket'
+                        } break;
+                    }
                     try {
                         let item = {
                             invoice: invoice,
                             url: url,
-                            brand: 'Chiikawamarket',
+                            brand: brand,
                             quantity: items[i].quantity,
-                            img: `https://chiikawamarket.jp/cdn/shop/files/${code}_1.jpg?v=1710477835&width=800`
+                            img: img,
                         }
                         const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
                         const res = await fetch(proxyUrl);
                         const html = await res.text();
                         const parser = new DOMParser();
                         const doc = parser.parseFromString(html, "text/html");
-                        item.title = doc.querySelector(".product__title")?.textContent.trim() || "";
-                        const price = doc.querySelector(".price-item.price-item--regular")?.textContent.trim() || "";
-                        item.price = price.match(/\d+/g)?.join("") ?? "";
-                        item.boolen = true;
+                        switch (market) {
+                            case 'NAGANO': {
+                                item.title = doc.querySelector(".product-page--title")?.textContent.trim() || "";
+                                const price = doc.querySelector(".product-form--price")?.textContent.trim() || "";
+                                item.price = price.match(/\d+/g)?.join("") ?? "";
+                                item.boolen = true;
+                            } break;
+                            default: case 'CHIIKAWA': {
+                                item.title = doc.querySelector(".product__title")?.textContent.trim() || "";
+                                const price = doc.querySelector(".price-item.price-item--regular")?.textContent.trim() || "";
+                                item.price = price.match(/\d+/g)?.join("") ?? "";
+                                item.boolen = true;
+                            } break;
+                        }
                         result.push(item)
                     } catch (err) {
                         result.boolen = false;
@@ -284,7 +312,7 @@
                     });
 
                     function jimpass() {
-                        const invoices = invoice === null ?'' :invoice.split("/")[1]
+                        const invoices = invoice === null ? '' : invoice.split("/")[1]
                         const str = `
                             ${"const items = " + JSON.stringify(result, null, 2) + ";"}
                             const orderNum = "${orderNum}";
@@ -299,7 +327,6 @@
                                 content.querySelector("input.price").value = items[i].price;
                                 content.querySelector("input.goodsName").value = items[i].title;
                                 content.querySelector("input.url").value = items[i].url;
-                                // 여기서부터 막힘
                                 const imgContent = document.querySelector("div.thumbnail.no_thumbnail");
                                 imgContent.className = 'thumbnail';
                                 imgContent.innerHTML = \`
@@ -307,15 +334,14 @@
                                     <img loading="lazy" referrerpolicy="no-referrer" src="\${item_img}" width="110" height="110" class="layer_preview" alt="">
                                 </div>
                                 \`;
-                                content.querySelector("th.thumb").innerHTML +=
-                                    '<input type="hidden" class="thumbnailFilePath" value="' + item_img + '">';
+                                content.querySelector("th.thumb").querySelector('input.thumbnailFilePath').value = item_img
                                 if(invoice !== null){
                                     content.querySelector("input.trackingNo").value = invoice;
                                 }
                             }
                         `
-                        navigator.clipboard.writeText(str).then(() => { 
-                            alert(`자동화 코드 입력 완료!!\n사용방법은 이용방법을 봐주세요.`); 
+                        navigator.clipboard.writeText(str).then(() => {
+                            alert(`자동화 코드 입력 완료!!\n사용방법은 이용방법을 봐주세요.`);
                         }).catch(err => { alert("복사 실패:", err); });
                     }
 
@@ -380,7 +406,15 @@
             document.querySelector(".loading").style.display = "flex";
             try {
                 const mailType = document.querySelector('.select_mail').value;
-                if (mailType === '트래킹 메일') { trekking() } else { checking() }
+                const marketType = document.querySelector('.select_market').value;
+                switch (marketType) {
+                    case '농담곰 마켓': {
+                        if (mailType === '트래킹 메일') { trekking('NAGANO') } else { checking('NAGANO') }
+                    } break;
+                    default: case '치이카와 마켓': {
+                        if (mailType === '트래킹 메일') { trekking('CHIIKAWA') } else { checking('CHIIKAWA') }
+                    } break;
+                }
             }
             catch (error) {
                 //에러 메세지
@@ -389,10 +423,15 @@
             }
         }
 
-        async function checking() {
+        async function checking(market) {
             const textArea = document.querySelector(".textArea").value;
+
             const orderNum = () => {
-                const match = textArea.match(/CHIIKAWA-\d+/);
+                let match = ''
+                switch (market) {
+                    case 'NAGANO': { match = textArea.match(/NAGANO-\d+/); } break;
+                    default: case'CHIIKAWA': { match = textArea.match(/CHIIKAWA-\d+/); } break;
+                }
                 if (match) { return match[0] }
             }
 
@@ -403,8 +442,9 @@
                 while ((match = blockRegex.exec(textArea)) !== null) {
                     const [_, code, name, price, count] = match;
                     if (code.trim() === "ORIGINALBOX") continue;
+                    const numericCode = code.trim().match(/\d+/)?.[0] || "";
                     items.push({
-                        code: code.trim(),
+                        code: numericCode,
                         name: name.trim(),
                         price: Number(price.replace(/,/g, '')),
                         quantity: Number(count)
@@ -412,10 +452,10 @@
                 }
                 return items;
             };
-            crawl(null, orderNum(), items())
+            crawl(market, null, orderNum(), items())
         }
 
-        async function trekking() {
+        async function trekking(market) {
             let result = {}
             const textArea = document.querySelector(".textArea").value;
 
@@ -429,7 +469,12 @@
             }
 
             const orderNum = () => {
-                const match = textArea.match(/CHIIKAWA-\d+/);
+                let match = ''
+                if (market === 'CHIIKAWA') { match = textArea.match(/CHIIKAWA-\d+/); }
+                switch (market) {
+                    case 'NAGANO': { match = textArea.match(/NAGANO-\d+/); } break;
+                    default: case 'CHIIKAWA': { match = textArea.match(/CHIIKAWA-\d+/); } break;
+                }
                 if (match) { return match[0] }
             }
 
@@ -441,14 +486,15 @@
                 while ((match = blockRegex.exec(textArea)) !== null) {
                     const [_, code, name, count] = match;
                     if (code.trim() === "ORIGINALBOX") continue;
+                    const numericCode = code.trim().match(/\d+/)?.[0] || "";
                     items.push({
-                        code: code.trim(),
+                        code: numericCode,
                         quantity: Number(count),
                     });
                 }
                 return items;
             };
-            crawl(invoiceNum(), orderNum(), items())
+            crawl(market, invoiceNum(), orderNum(), items())
         }
     </script>
 </body>
