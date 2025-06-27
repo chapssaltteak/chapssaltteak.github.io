@@ -269,8 +269,7 @@
                 }
 
                 if (true) {
-                    if(invoice == null) {
-                        document.querySelector(".itemList").innerHTML += `
+                    document.querySelector(".itemList").innerHTML += `
                             <div style="display:flex; flex-direction: row;">
                                 <button 
                                 class="jimpassBtn"
@@ -280,23 +279,20 @@
                                 </button>
                             </div>
                         `;
-                    }
-
                     document.querySelector(".itemList").addEventListener("click", (event) => {
                         if (event.target.classList.contains("jimpassBtn")) { jimpass(); }
                     });
 
                     function jimpass() {
-                        alert('개발중입니다.')
-                        const invoices = invoice.split("/")[1];
-                        console.log(`
+                        const invoices = invoice === null ?'' :invoice.split("/")[1]
+                        const str = `
                             ${"const items = " + JSON.stringify(result, null, 2) + ";"}
                             const orderNum = "${orderNum}";
                             const invoice = "${invoices}";
                             for(let i=0; i < items.length; i++){
                                 const item_img = items[i].img;
                                 document.querySelector('.btn.btn-sm.type-add').click();
-                                const content = document.querySelectorAll("#goods > li")[i]
+                                const content = document.querySelectorAll("#goods > li")[i];
                                 content.querySelector("input.orderNo").value = orderNum;
                                 content.querySelector("input.type_text.seller").value = items[i].brand;
                                 content.querySelector("input.type_text.number.eventKeyPrice.numberType.int.quantity").value = items[i].quantity;
@@ -304,22 +300,23 @@
                                 content.querySelector("input.goodsName").value = items[i].title;
                                 content.querySelector("input.url").value = items[i].url;
                                 // 여기서부터 막힘
-                                content.querySelector("th.thumb").innerHTML =
-                                    '<input type="hidden" class="thumbnailFilePath" value="' + item_img + '">';
                                 const imgContent = document.querySelector("div.thumbnail.no_thumbnail");
                                 imgContent.className = 'thumbnail';
-                                imgContent.querySelector("div").innerHTML = 
-                                    '<img src="' + item_img + '" width="110" height="110" class="layer_preview" alt="">';
-
+                                imgContent.innerHTML = \`
+                                <div>
+                                    <img loading="lazy" referrerpolicy="no-referrer" src="\${item_img}" width="110" height="110" class="layer_preview" alt="">
+                                </div>
+                                \`;
+                                content.querySelector("th.thumb").innerHTML +=
+                                    '<input type="hidden" class="thumbnailFilePath" value="' + item_img + '">';
                                 if(invoice !== null){
                                     content.querySelector("input.trackingNo").value = invoice;
                                 }
                             }
-                        `)
-                        // 실제 동작 추가
-                        //document.querySelector('.btn.btn-sm.type-add').click(); // 클릭 
-                        //document.querySelectorAll("#goods > li") 입력칸들 
-
+                        `
+                        navigator.clipboard.writeText(str).then(() => { 
+                            alert(`자동화 코드 입력 완료!!\n사용방법은 이용방법을 봐주세요.`); 
+                        }).catch(err => { alert("복사 실패:", err); });
                     }
 
                 }
