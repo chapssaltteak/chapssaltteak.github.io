@@ -299,16 +299,25 @@
                 if (true) {
                     document.querySelector(".itemList").innerHTML += `
                             <div style="display:flex; flex-direction: row;">
-                                <button 
-                                class="jimpassBtn"
-                                style="margin-left: auto; color: white; background-color: #660099; border-radius: 5px; padding: 0.5rem 1rem; border: 0; font-weight: 700;"
-                                >
-                                    짐패스 자동 입력
-                                </button>
+                                <div style="display:flex; flex-direction: row; margin-left: auto; gap: 5px">
+                                    <button 
+                                    class="kaeruBtn"
+                                    style="color: white; background-color: #660099; border-radius: 5px; padding: 0.5rem 1rem; border: 0; font-weight: 700;"
+                                    >
+                                        카에루몰 자동 입력
+                                    </button>
+                                    <button 
+                                    class="jimpassBtn"
+                                    style="color: white; background-color: #660099; border-radius: 5px; padding: 0.5rem 1rem; border: 0; font-weight: 700;"
+                                    >
+                                        짐패스 자동 입력
+                                    </button>
+                                </div>
                             </div>
                         `;
                     document.querySelector(".itemList").addEventListener("click", (event) => {
                         if (event.target.classList.contains("jimpassBtn")) { jimpass(); }
+                        if (event.target.classList.contains("kaeruBtn")) { kaeru(); }
                     });
 
                     function jimpass() {
@@ -339,6 +348,39 @@
                                     content.querySelector("input.trackingNo").value = invoice;
                                 }
                             }
+                        `
+                        navigator.clipboard.writeText(str).then(() => {
+                            alert(`자동화 코드 입력 완료!!\n사용방법은 이용방법을 봐주세요.`);
+                        }).catch(err => { alert("복사 실패:", err); });
+                    }
+
+                    function kaeru() {
+                        const invoices = invoice === null ? '' : invoice.split("/")[1]
+                        const str = `
+                            const originalAlert = window.alert; // 백업
+                            window.alert = function() {};
+                            
+                            ${"const items = " + JSON.stringify(result, null, 2) + ";"}
+                            const orderNum = "${orderNum}";
+                            const invoice = "${invoices}";
+                            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+                            document.querySelector('input[name="orderno"]').value = orderNum;
+                            document.querySelector('input[name="trackingno_"]').value = invoice;
+                            for(let i=0; i < items.length; i++){
+                                if(i !== 0){
+                                    const addButton = document.querySelector('[name="addButton"]');
+                                    addButton.click();
+                                    await delay(500);
+                                }
+                                const content = document.getElementById("goodsLayer").children[i];
+                                content.querySelector('[name="productname[]"]').value = items[i].title;
+                                content.querySelector('[name="price[]"]').value = items[i].price;
+                                content.querySelector('[name="quantity[]"]').value = items[i].quantity;
+                                content.querySelector('[name="target_url[]"]').value = items[i].url;
+                                content.querySelector('[name="image_url[]"]').value = items[i].img;
+                            }
+                            window.alert = originalAlert;
                         `
                         navigator.clipboard.writeText(str).then(() => {
                             alert(`자동화 코드 입력 완료!!\n사용방법은 이용방법을 봐주세요.`);
@@ -430,7 +472,7 @@
                 let match = ''
                 switch (market) {
                     case 'NAGANO': { match = textArea.match(/NAGANO-\d+/); } break;
-                    default: case'CHIIKAWA': { match = textArea.match(/CHIIKAWA-\d+/); } break;
+                    default: case 'CHIIKAWA': { match = textArea.match(/CHIIKAWA-\d+/); } break;
                 }
                 if (match) { return match[0] }
             }
